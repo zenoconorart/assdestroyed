@@ -157,9 +157,9 @@ function playVictoryJingle(){
   });
 }
 
-function saveScore(name,score){
-  scoreboard.push({name,score});
-  scoreboard.sort((a,b)=>b.score-a.score);
+function saveScore(name,time){
+  scoreboard.push({name,time});
+  scoreboard.sort((a,b)=>(a.time||Infinity)-(b.time||Infinity));
   scoreboard.splice(5);
   localStorage.setItem('scoreboard', JSON.stringify(scoreboard));
 }
@@ -182,9 +182,11 @@ const TURN_SPEED = 0.05;
 const ACCELERATION = 0.05;
 const BULLET_SPEED = 3;
 const SLOWDOWN_FACTOR = 0.95; // when holding the down arrow
-const ASTEROID_MIN_SPEED = 0.5;
-const ASTEROID_MAX_SPEED = 1.2;
+const ASTEROID_MIN_SPEED = 0.8;
+const ASTEROID_MAX_SPEED = 1.8;
 let score = 0;
+let startTime = performance.now();
+let gameTime = 0;
 let lives = 3;
 let gameOver = false;
 let waiting = false;
@@ -196,7 +198,10 @@ const ship = {x: canvas.width/2, y: canvas.height/2, angle: 0, vx:0, vy:0};
 const bullets = [];
 const asteroids = [];
 const explosions = [];
+const BURST_LIMIT = 10;
+let burstCount = 0;
 const scoreboard = JSON.parse(localStorage.getItem('scoreboard')||'[]');
+scoreboard.sort((a,b)=>(a.time||Infinity)-(b.time||Infinity));
 function spawnAsteroid(size=1, x=Math.random()*canvas.width, y=Math.random()*canvas.height) {
   const angle = Math.random() * Math.PI * 2;
   const speed = ASTEROID_MIN_SPEED + Math.random() * (ASTEROID_MAX_SPEED - ASTEROID_MIN_SPEED);
@@ -206,13 +211,17 @@ function spawnAsteroid(size=1, x=Math.random()*canvas.width, y=Math.random()*can
 function startLevel(){
   waiting = false;
   levelComplete = false;
+  if(level===1){
+    startTime = performance.now();
+    gameTime = 0;
+  }
   ship.x = canvas.width/2;
   ship.y = canvas.height/2;
   ship.vx = ship.vy = 0;
   ship.angle = 0;
   bullets.length = 0;
   asteroids.length = 0;
-  for(let i=0;i<5;i++) {
+  for(let i=0;i<7;i++) {
     let size = 1;
     if(level===2) size = 2;
     else if(level===3) size = 3;
@@ -236,6 +245,8 @@ function playerHit(){
 }
 function restartGame(){
   score = 0;
+  startTime = performance.now();
+  gameTime = 0;
   lives = 3;
   gameOver = false;
   waiting = false;
@@ -261,7 +272,7 @@ document.addEventListener('keydown',e=>{
       restartGame();
     }else if(gameComplete){
       const name = prompt('Enter your name');
-      if(name) saveScore(name, score);
+      if(name) saveScore(name, gameTime);
       restartGame();
     }else if(levelComplete){
       nextLevel();
@@ -273,6 +284,7 @@ document.addEventListener('keydown',e=>{
 document.addEventListener('keyup',e=>{keys[e.code]=false;});
 function update(){
   if(gameOver || waiting || levelComplete || gameComplete) return;
+  gameTime = (performance.now() - startTime) / 1000;
   stars.forEach(s=>{s.phase+=s.speed;});
   if(keys['ArrowLeft']) ship.angle -= TURN_SPEED;
   if(keys['ArrowRight']) ship.angle += TURN_SPEED;
@@ -295,7 +307,7 @@ function update(){
   engineOsc.frequency.value = 100 + speed * 200;
   engineGain.gain.value = speed > 0.05 ? 0.05 : 0;
   if(keys['Space']) {
-    if(!ship.shootCooldown) {
+    if(!ship.shootCooldown && burstCount < BURST_LIMIT) {
       bullets.push({
         x: ship.x,
         y: ship.y,
@@ -303,8 +315,11 @@ function update(){
         vy: Math.sin(ship.angle) * BULLET_SPEED
       });
       playShootSound();
-      ship.shootCooldown = 10;
+      ship.shootCooldown = 15;
+      burstCount++;
     }
+  } else {
+    burstCount = 0;
   }
   if(ship.shootCooldown>0) ship.shootCooldown--;
   ship.x = (ship.x + ship.vx + canvas.width) % canvas.width;
@@ -404,7 +419,7 @@ function draw(){
   ctx.restore();
   ctx.fillStyle='white';
   ctx.textAlign='left';
-  ctx.fillText('Score: '+score+'  Level: '+level,10,30);
+  ctx.fillText('Score: '+score+'  Level: '+level+'  Time: '+gameTime.toFixed(1)+'s',10,30);
   ctx.textAlign='right';
   ctx.fillText(shipEmoji.repeat(lives),canvas.width-10,30);
   if(gameComplete){
@@ -412,7 +427,8 @@ function draw(){
     ctx.fillText('Game complete - press Enter',canvas.width/2,canvas.height/2-40);
     ctx.fillText('Scoreboard:',canvas.width/2,canvas.height/2);
     scoreboard.forEach((s,i)=>{
-      ctx.fillText(`${i+1}. ${s.name} - ${s.score}`,canvas.width/2,canvas.height/2+30*(i+1));
+      const t = s.time!==undefined ? s.time.toFixed(1)+'s' : '?';
+      ctx.fillText(`${i+1}. ${s.name} - ${t}`,canvas.width/2,canvas.height/2+30*(i+1));
     });
   } else if(levelComplete){
     ctx.textAlign='center';
