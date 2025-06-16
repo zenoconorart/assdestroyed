@@ -19,7 +19,7 @@ poo scatter effect. Lives are shown as 🍆 icons in the upper-right corner. If 
 lose all three lives a game over screen appears. Once every 🍑 is gone a "Level
 complete" message pops up, except on the final stage where "Game complete" is shown
 and you can enter your name in the scoreboard. The background music pauses when
-you crash so it doesn't drone on. A "Mute" button at the top toggles the music on
-and off.
+you crash so it doesn't drone on. A "🔕" button near the lives toggles the music
+on and off without stealing focus.
 Press `Enter` to continue after losing a life or to
 restart after game over or after recording your high score.
