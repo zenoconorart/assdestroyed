@@ -48,12 +48,12 @@ engineOsc.type = 'sine';
 engineGain.gain.value = 0;
 engineOsc.connect(engineGain).connect(audioCtx.destination);
 engineOsc.start();
-// background jingle
+// background jingle (slightly softer)
 const musicNotes = [
-  {freq: 523, dur: 0.3},
-  {freq: 659, dur: 0.3},
-  {freq: 784, dur: 0.3},
-  {freq: 659, dur: 0.3}
+  {freq: 440, dur: 0.4},
+  {freq: 554, dur: 0.4},
+  {freq: 659, dur: 0.4},
+  {freq: 880, dur: 0.4}
 ];
 let musicPlaying = false;
 function scheduleMusic(){
@@ -62,9 +62,9 @@ function scheduleMusic(){
   musicNotes.forEach(n=>{
     const osc = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
-    osc.type = 'square';
+    osc.type = 'triangle';
     osc.frequency.value = n.freq;
-    gain.gain.value = 0.05;
+    gain.gain.value = 0.03;
     osc.connect(gain).connect(audioCtx.destination);
     osc.start(audioCtx.currentTime + start);
     osc.stop(audioCtx.currentTime + start + n.dur);
@@ -103,19 +103,30 @@ let lives = 3;
 let gameOver = false;
 let waiting = false;
 let levelComplete = false;
+let level = 1;
 let reverseHold = 0;
 const ship = {x: canvas.width/2, y: canvas.height/2, angle: 0, vx:0, vy:0};
 const bullets = [];
 const asteroids = [];
 const explosions = [];
-function spawnAsteroid() {
-  const x = Math.random() * canvas.width;
-  const y = Math.random() * canvas.height;
+function spawnAsteroid(size=1, x=Math.random()*canvas.width, y=Math.random()*canvas.height) {
   const angle = Math.random() * Math.PI * 2;
   const speed = ASTEROID_MIN_SPEED + Math.random() * (ASTEROID_MAX_SPEED - ASTEROID_MIN_SPEED);
-  asteroids.push({ x, y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed });
+  asteroids.push({ x, y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, size });
 }
-for(let i=0;i<5;i++) spawnAsteroid();
+
+function startLevel(){
+  waiting = false;
+  levelComplete = false;
+  ship.x = canvas.width/2;
+  ship.y = canvas.height/2;
+  ship.vx = ship.vy = 0;
+  ship.angle = 0;
+  bullets.length = 0;
+  asteroids.length = 0;
+  for(let i=0;i<5;i++) spawnAsteroid(level===2 ? 2 : 1);
+}
+startLevel();
 function playerHit(){
   lives--;
   playCrashSound();
@@ -135,13 +146,13 @@ function restartGame(){
   gameOver = false;
   waiting = false;
   levelComplete = false;
-  ship.x = canvas.width/2;
-  ship.y = canvas.height/2;
-  ship.vx = ship.vy = 0;
-  ship.angle = 0;
-  bullets.length = 0;
-  asteroids.length = 0;
-  for(let i=0;i<5;i++) spawnAsteroid();
+  level = 1;
+  startLevel();
+}
+
+function nextLevel(){
+  level++;
+  startLevel();
 }
 const keys = {};
 document.addEventListener('keydown',e=>{
@@ -149,8 +160,10 @@ document.addEventListener('keydown',e=>{
   startMusic();
   keys[e.code]=true;
   if(e.code==='Enter'){
-    if(gameOver || levelComplete){
+    if(gameOver){
       restartGame();
+    }else if(levelComplete){
+      nextLevel();
     }else if(waiting){
       waiting=false;
     }
@@ -199,17 +212,22 @@ function update(){
     const a = asteroids[ai];
     a.x = (a.x+a.vx+canvas.width)%canvas.width;
     a.y = (a.y+a.vy+canvas.height)%canvas.height;
+    const radius = 20 * (a.size || 1);
     for(let bi=bullets.length-1; bi>=0; bi--){
       const b = bullets[bi];
-      if(Math.hypot(a.x-b.x,a.y-b.y)<20){
+      if(Math.hypot(a.x-b.x,a.y-b.y)<radius){
         bullets.splice(bi,1);
         asteroids.splice(ai,1);
+        if(level===2 && a.size===2){
+          spawnAsteroid(1,a.x,a.y);
+          spawnAsteroid(1,a.x,a.y);
+        }
         score++;
         explosions.push({x:a.x, y:a.y, life:20});
         break;
       }
     }
-    if(Math.hypot(a.x-ship.x,a.y-ship.y)<20){
+    if(Math.hypot(a.x-ship.x,a.y-ship.y)<radius){
       asteroids.splice(ai,1);
       playerHit();
     }
@@ -225,6 +243,7 @@ function update(){
 }
 function draw(){
   ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.globalAlpha = 1;
   stars.forEach(s=>{
     const alpha = 0.5 + 0.5*Math.sin(s.phase);
     ctx.fillStyle = `rgba(255,255,255,${alpha})`;
@@ -234,7 +253,11 @@ function draw(){
   ctx.textAlign='center';
   ctx.textBaseline='middle';
   bullets.forEach(b=>{ctx.fillText(bulletEmoji,b.x,b.y);});
-  asteroids.forEach(a=>{ctx.fillText(asteroidEmoji,a.x,a.y);});
+  asteroids.forEach(a=>{
+    ctx.font = `${30*(a.size||1)}px serif`;
+    ctx.fillText(asteroidEmoji,a.x,a.y);
+  });
+  ctx.font='30px serif';
   explosions.forEach(ex=>{
     ctx.save();
     ctx.globalAlpha = ex.life/20;
@@ -251,7 +274,7 @@ function draw(){
   ctx.restore();
   ctx.fillStyle='white';
   ctx.textAlign='left';
-  ctx.fillText('Score: '+score,10,30);
+  ctx.fillText('Score: '+score+'  Level: '+level,10,30);
   ctx.textAlign='right';
   ctx.fillText(shipEmoji.repeat(lives),canvas.width-10,30);
   if(levelComplete){
