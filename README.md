@@ -4,4 +4,6 @@ A small playable asteroids game that uses emoji icons for the ship, bullets and 
 
 ## Running
 
-Open `index.html` in a modern web browser. Use the arrow keys to rotate and move the ship, and press the space bar to shoot.
+Open `index.html` in a modern web browser. Use the left/right arrows to rotate
+and the up arrow to accelerate. Hold the down arrow to slow down gradually.
+Press the space bar to shoot.
