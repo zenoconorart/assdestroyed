@@ -17,12 +17,13 @@ canvas {
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 const shipEmoji = '🍆'; // eggplant
-const bulletEmoji = '💦'; // water spray
+const bulletEmoji = '💧'; // water droplet
 const asteroidEmoji = '🍑'; // peach
 // Tunable game constants (slightly slower overall)
 const TURN_SPEED = 0.05;
 const ACCELERATION = 0.05;
 const BULLET_SPEED = 3;
+const BULLET_RANGE = canvas.width / 2; // bullets travel about half the screen
 const SLOWDOWN_FACTOR = 0.95; // when holding the down arrow
 const ASTEROID_MIN_SPEED = 0.5;
 const ASTEROID_MAX_SPEED = 1.2;
@@ -103,7 +104,13 @@ function update(){
   }
   if(keys['Space']) {
     if(!ship.shootCooldown) {
-      bullets.push({ x: ship.x, y: ship.y, vx: Math.cos(ship.angle) * BULLET_SPEED, vy: Math.sin(ship.angle) * BULLET_SPEED });
+      bullets.push({
+        x: ship.x,
+        y: ship.y,
+        vx: Math.cos(ship.angle) * BULLET_SPEED,
+        vy: Math.sin(ship.angle) * BULLET_SPEED,
+        life: BULLET_RANGE
+      });
       ship.shootCooldown = 10;
     }
   }
@@ -113,7 +120,8 @@ function update(){
   bullets.forEach((b,i)=>{
     b.x += b.vx;
     b.y += b.vy;
-    if(b.x<0||b.x>canvas.width||b.y<0||b.y>canvas.height) bullets.splice(i,1);
+    b.life -= Math.hypot(b.vx, b.vy);
+    if(b.life <= 0 || b.x<0||b.x>canvas.width||b.y<0||b.y>canvas.height) bullets.splice(i,1);
   });
   for(let ai=asteroids.length-1; ai>=0; ai--){
     const a = asteroids[ai];
