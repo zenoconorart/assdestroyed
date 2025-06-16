@@ -4,6 +4,9 @@ A small playable asteroids game where the ship, bullets and asteroids are repres
 
 ## Running
 
+The game includes background music, randomized twinkling stars and simple sound
+effects: spurt when you shoot, splat when you crash and a vroom that changes
+with speed.
 Open `index.html` in a modern web browser. Use the left/right arrows to rotate
 and the up arrow to accelerate. Hold the down arrow to brake; keep holding to
 thrust backwards. Press the space bar to shoot.
