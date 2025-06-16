@@ -30,10 +30,12 @@ let score = 0;
 let lives = 3;
 let gameOver = false;
 let waiting = false;
+let levelComplete = false;
 let reverseHold = 0;
 const ship = {x: canvas.width/2, y: canvas.height/2, angle: 0, vx:0, vy:0};
 const bullets = [];
 const asteroids = [];
+const explosions = [];
 function spawnAsteroid() {
   const x = Math.random() * canvas.width;
   const y = Math.random() * canvas.height;
@@ -59,6 +61,7 @@ function restartGame(){
   lives = 3;
   gameOver = false;
   waiting = false;
+  levelComplete = false;
   ship.x = canvas.width/2;
   ship.y = canvas.height/2;
   ship.vx = ship.vy = 0;
@@ -71,16 +74,16 @@ const keys = {};
 document.addEventListener('keydown',e=>{
   keys[e.code]=true;
   if(e.code==='Enter'){
-    if(waiting){
-      waiting=false;
-    }else if(gameOver){
+    if(gameOver || levelComplete){
       restartGame();
+    }else if(waiting){
+      waiting=false;
     }
   }
 });
 document.addEventListener('keyup',e=>{keys[e.code]=false;});
 function update(){
-  if(gameOver || waiting) return;
+  if(gameOver || waiting || levelComplete) return;
   if(keys['ArrowLeft']) ship.angle -= TURN_SPEED;
   if(keys['ArrowRight']) ship.angle += TURN_SPEED;
   if(keys['ArrowUp']) {
@@ -122,7 +125,7 @@ function update(){
         bullets.splice(bi,1);
         asteroids.splice(ai,1);
         score++;
-        spawnAsteroid();
+        explosions.push({x:a.x, y:a.y, life:20});
         break;
       }
     }
@@ -130,6 +133,14 @@ function update(){
       asteroids.splice(ai,1);
       playerHit();
     }
+  }
+  explosions.forEach((ex,i)=>{
+    ex.life--;
+    if(ex.life<=0) explosions.splice(i,1);
+  });
+  if(!levelComplete && asteroids.length===0){
+    levelComplete=true;
+    waiting=true;
   }
 }
 function draw(){
@@ -139,6 +150,15 @@ function draw(){
   ctx.textBaseline='middle';
   bullets.forEach(b=>{ctx.fillText(bulletEmoji,b.x,b.y);});
   asteroids.forEach(a=>{ctx.fillText(asteroidEmoji,a.x,a.y);});
+  explosions.forEach(ex=>{
+    ctx.save();
+    ctx.globalAlpha = ex.life/20;
+    ctx.fillStyle = 'brown';
+    ctx.beginPath();
+    ctx.arc(ex.x, ex.y, 20 - ex.life, 0, Math.PI*2);
+    ctx.fill();
+    ctx.restore();
+  });
   ctx.save();
   ctx.translate(ship.x,ship.y);
   ctx.rotate(ship.angle);
@@ -149,7 +169,10 @@ function draw(){
   ctx.fillText('Score: '+score,10,30);
   ctx.textAlign='right';
   ctx.fillText(shipEmoji.repeat(lives),canvas.width-10,30);
-  if(waiting){
+  if(levelComplete){
+    ctx.textAlign='center';
+    ctx.fillText('Level complete - press Enter',canvas.width/2,canvas.height/2);
+  } else if(waiting){
     ctx.textAlign='center';
     ctx.fillText('Press Enter to continue',canvas.width/2,canvas.height/2);
   }
