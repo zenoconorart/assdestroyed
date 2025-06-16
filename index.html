@@ -9,13 +9,19 @@ canvas {
     display: block;
     margin: 0 auto;
 }
+button {
+    display: block;
+    margin: 10px auto;
+}
 </style>
 </head>
 <body>
+<button id="muteButton">Mute</button>
 <canvas id="gameCanvas" width="800" height="600"></canvas>
 <script>
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
+const muteBtn = document.getElementById('muteButton');
 const shipEmoji = '🍆'; // eggplant
 const bulletEmoji = '💦'; // water spray
 const asteroidEmoji = '🍑'; // peach
@@ -41,6 +47,18 @@ function playCrashSound(){
   osc.connect(gain).connect(audioCtx.destination);
   osc.start();
   osc.stop(audioCtx.currentTime + 0.5);
+}
+function playFartSound(){
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.type = 'triangle';
+  osc.frequency.setValueAtTime(120, audioCtx.currentTime);
+  osc.frequency.exponentialRampToValueAtTime(60, audioCtx.currentTime + 0.3);
+  gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.3);
+  osc.connect(gain).connect(audioCtx.destination);
+  osc.start();
+  osc.stop(audioCtx.currentTime + 0.3);
 }
 const engineOsc = audioCtx.createOscillator();
 const engineGain = audioCtx.createGain();
@@ -79,6 +97,17 @@ function startMusic(){
   }
 }
 
+muteBtn.addEventListener('click', () => {
+  if(musicPlaying){
+    musicPlaying = false;
+    muteBtn.textContent = 'Unmute';
+  } else {
+    musicPlaying = true;
+    scheduleMusic();
+    muteBtn.textContent = 'Mute';
+  }
+});
+
 function playVictoryJingle(){
   const notes = [
     {freq:523, dur:0.3},
@@ -104,6 +133,17 @@ function saveScore(name,score){
   scoreboard.sort((a,b)=>b.score-a.score);
   scoreboard.splice(5);
   localStorage.setItem('scoreboard', JSON.stringify(scoreboard));
+}
+
+function drawDroplet(x,y,size){
+  ctx.save();
+  ctx.fillStyle='white';
+  ctx.beginPath();
+  ctx.moveTo(x, y - size);
+  ctx.quadraticCurveTo(x + size, y, x, y + size);
+  ctx.quadraticCurveTo(x - size, y, x, y - size);
+  ctx.fill();
+  ctx.restore();
 }
 // Star field
 const stars = [];
@@ -138,10 +178,10 @@ const bullets = [];
 const asteroids = [];
 const explosions = [];
 const scoreboard = JSON.parse(localStorage.getItem('scoreboard')||'[]');
-function spawnAsteroid(size=1, x=Math.random()*canvas.width, y=Math.random()*canvas.height) {
+function spawnAsteroid(size=1, x=Math.random()*canvas.width, y=Math.random()*canvas.height, emoji=asteroidEmoji) {
   const angle = Math.random() * Math.PI * 2;
   const speed = ASTEROID_MIN_SPEED + Math.random() * (ASTEROID_MAX_SPEED - ASTEROID_MIN_SPEED);
-  asteroids.push({ x, y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, size });
+  asteroids.push({ x, y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, size, emoji });
 }
 
 function startLevel(){
@@ -260,20 +300,27 @@ function update(){
         bullets.splice(bi,1);
         asteroids.splice(ai,1);
         if(level===2 && a.size===2){
-          spawnAsteroid(1,a.x,a.y);
-          spawnAsteroid(1,a.x,a.y);
+          spawnAsteroid(1,a.x,a.y,'droplet');
+          spawnAsteroid(1,a.x,a.y,'droplet');
         } else if(level===3){
           if(a.size===3){
-            spawnAsteroid(2,a.x,a.y);
-            spawnAsteroid(2,a.x,a.y);
-            spawnAsteroid(2,a.x,a.y);
+            spawnAsteroid(2,a.x,a.y,'droplet');
+            spawnAsteroid(2,a.x,a.y,'droplet');
+            spawnAsteroid(2,a.x,a.y,'droplet');
           } else if(a.size===2){
-            spawnAsteroid(1,a.x,a.y);
-            spawnAsteroid(1,a.x,a.y);
+            spawnAsteroid(1,a.x,a.y,'droplet');
+            spawnAsteroid(1,a.x,a.y,'droplet');
           }
         }
+        playFartSound();
         score++;
-        explosions.push({x:a.x, y:a.y, life:20});
+        const frags=[];
+        for(let i=0;i<5;i++){
+          const ang=Math.random()*Math.PI*2;
+          const spd=1+Math.random()*2;
+          frags.push({x:a.x,y:a.y,vx:Math.cos(ang)*spd,vy:Math.sin(ang)*spd});
+        }
+        explosions.push({life:20,frags});
         break;
       }
     }
@@ -284,6 +331,7 @@ function update(){
   }
   explosions.forEach((ex,i)=>{
     ex.life--;
+    ex.frags.forEach(f=>{f.x+=f.vx; f.y+=f.vy;});
     if(ex.life<=0) explosions.splice(i,1);
   });
   if(!levelComplete && asteroids.length===0){
@@ -312,16 +360,19 @@ function draw(){
   bullets.forEach(b=>{ctx.fillText(bulletEmoji,b.x,b.y);});
   asteroids.forEach(a=>{
     ctx.font = `${30*(a.size||1)}px serif`;
-    ctx.fillText(asteroidEmoji,a.x,a.y);
+    if(a.emoji==='droplet'){
+      drawDroplet(a.x,a.y,15*(a.size||1));
+    } else {
+      ctx.fillText(a.emoji || asteroidEmoji,a.x,a.y);
+    }
   });
-  ctx.font='30px serif';
+  ctx.font='20px serif';
   explosions.forEach(ex=>{
     ctx.save();
     ctx.globalAlpha = ex.life/20;
-    ctx.fillStyle = 'brown';
-    ctx.beginPath();
-    ctx.arc(ex.x, ex.y, 20 - ex.life, 0, Math.PI*2);
-    ctx.fill();
+    ex.frags.forEach(f=>{
+      ctx.fillText('💩', f.x, f.y);
+    });
     ctx.restore();
   });
   ctx.save();
