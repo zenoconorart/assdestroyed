@@ -9,329 +9,54 @@ canvas {
     display: block;
     margin: 0 auto;
 }
-button {
-    position: absolute;
-    top: 8px;
-    left: 50%;
-    transform: translateX(-50%);
-    font-size: 20px;
-    background: transparent;
-    border: none;
-    cursor: pointer;
-}
 </style>
 </head>
 <body>
-<button id="muteButton" tabindex="-1">🔕</button>
 <canvas id="gameCanvas" width="800" height="600"></canvas>
 <script>
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
-const muteBtn = document.getElementById('muteButton');
 const shipEmoji = '🍆'; // eggplant
-const bulletEmoji = '💧'; // water droplet
+const bulletEmoji = '💦'; // water spray
 const asteroidEmoji = '🍑'; // peach
-// Audio setup
-const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-function playShootSound(){
-  const osc = audioCtx.createOscillator();
-  const gain = audioCtx.createGain();
-  osc.type = 'square';
-  osc.frequency.value = 600;
-  gain.gain.value = 0.1;
-  osc.connect(gain).connect(audioCtx.destination);
-  osc.start();
-  osc.stop(audioCtx.currentTime + 0.1);
-}
-function playCrashSound(){
-  const osc = audioCtx.createOscillator();
-  const gain = audioCtx.createGain();
-  osc.type = 'sawtooth';
-  osc.frequency.value = 80;
-  gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
-  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.5);
-  osc.connect(gain).connect(audioCtx.destination);
-  osc.start();
-  osc.stop(audioCtx.currentTime + 0.5);
-}
-function playFartSound(){
-  const osc = audioCtx.createOscillator();
-  const gain = audioCtx.createGain();
-  osc.type = 'triangle';
-  osc.frequency.setValueAtTime(120, audioCtx.currentTime);
-  osc.frequency.exponentialRampToValueAtTime(60, audioCtx.currentTime + 0.3);
-  gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
-  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.3);
-  osc.connect(gain).connect(audioCtx.destination);
-  osc.start();
-  osc.stop(audioCtx.currentTime + 0.3);
-}
-const engineOsc = audioCtx.createOscillator();
-const engineGain = audioCtx.createGain();
-engineOsc.type = 'sine';
-engineGain.gain.value = 0;
-engineOsc.connect(engineGain).connect(audioCtx.destination);
-engineOsc.start();
-// background jingle (slightly softer)
-const musicNotes = [
-  {freq: 440, dur: 0.4},
-  {freq: 554, dur: 0.4},
-  {freq: 659, dur: 0.4},
-  {freq: 880, dur: 0.4}
-];
-let musicPlaying = false;
-let musicEnabled = true;
-let musicInitiated = false;
-let musicTimeout = null;
-const musicOscs = [];
-function scheduleMusic(){
-  if(!musicPlaying) return;
-  let start = 0;
-  musicNotes.forEach(n=>{
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
-    osc.type = 'triangle';
-    osc.frequency.value = n.freq;
-    gain.gain.value = 0.03;
-    osc.connect(gain).connect(audioCtx.destination);
-    osc.start(audioCtx.currentTime + start);
-    osc.stop(audioCtx.currentTime + start + n.dur);
-    musicOscs.push(osc);
-    osc.onended = () => {
-      const i = musicOscs.indexOf(osc);
-      if(i>=0) musicOscs.splice(i,1);
-    };
-    start += n.dur;
-  });
-  musicTimeout = setTimeout(scheduleMusic, start*1000);
-}
-function startMusic(){
-  if(!musicEnabled) return;
-  musicInitiated = true;
-  if(!musicPlaying){
-    musicPlaying = true;
-    scheduleMusic();
-  }
-}
-function stopMusic(){
-  musicPlaying = false;
-  if(musicTimeout){
-    clearTimeout(musicTimeout);
-    musicTimeout = null;
-  }
-  musicOscs.forEach(o=>{ try { o.stop(); } catch(e) {} });
-  musicOscs.length = 0;
-}
-
-muteBtn.addEventListener('click', (e) => {
-  e.preventDefault();
-  if(musicEnabled){
-    musicEnabled = false;
-    stopMusic();
-    muteBtn.textContent = '🔔';
-  } else {
-    musicEnabled = true;
-    startMusic();
-    muteBtn.textContent = '🔕';
-  }
-  muteBtn.blur();
-});
-
-function playVictoryJingle(){
-  const notes = [
-    {freq:523, dur:0.3},
-    {freq:659, dur:0.3},
-    {freq:784, dur:0.6}
-  ];
-  let start=0;
-  notes.forEach(n=>{
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
-    osc.type='triangle';
-    osc.frequency.value=n.freq;
-    gain.gain.value=0.1;
-    osc.connect(gain).connect(audioCtx.destination);
-    osc.start(audioCtx.currentTime+start);
-    osc.stop(audioCtx.currentTime+start+n.dur);
-    start+=n.dur;
-  });
-}
-
-function saveScore(name,time){
-  scoreboard.push({name,time});
-  scoreboard.sort((a,b)=>(a.time||Infinity)-(b.time||Infinity));
-  scoreboard.splice(5);
-  localStorage.setItem('scoreboard', JSON.stringify(scoreboard));
-}
-
-// Star field
-const stars = [];
-function initStars(){
-  for(let i=0;i<100;i++){
-    stars.push({
-      x: Math.random()*canvas.width,
-      y: Math.random()*canvas.height,
-      phase: Math.random()*Math.PI*2,
-      speed: 0.01 + Math.random()*0.02
-    });
-  }
-}
-initStars();
 // Tunable game constants (slightly slower overall)
 const TURN_SPEED = 0.05;
 const ACCELERATION = 0.05;
 const BULLET_SPEED = 3;
-const BULLET_RANGE = canvas.width / 2; // bullets travel about half the screen
 const SLOWDOWN_FACTOR = 0.95; // when holding the down arrow
-const ASTEROID_MIN_SPEED = 0.8;
-const ASTEROID_MAX_SPEED = 1.8;
+const ASTEROID_MIN_SPEED = 0.5;
+const ASTEROID_MAX_SPEED = 1.2;
 let score = 0;
-let startTime = performance.now();
-let gameTime = 0;
-const BURST_LIMIT = 10;
-let burstCount = 0;
-scoreboard.sort((a,b)=>(a.time||Infinity)-(b.time||Infinity));
-let scoreEntered = false;
-  if(level===1){
-    startTime = performance.now();
-    gameTime = 0;
-  }
-  for(let i=0;i<7;i++) {
-  startTime = performance.now();
-  gameTime = 0;
-  scoreEntered = false;
-      if(!scoreEntered){
-        const name = prompt('Enter your name');
-        if(name) saveScore(name, gameTime);
-        scoreEntered = true;
-      } else {
-        restartGame();
-      }
-      ship.shootCooldown = 15;
-      burstCount++;
-  } else {
-    burstCount = 0;
-let waiting = false;
-let levelComplete = false;
-let gameComplete = false;
-let level = 1;
-let reverseHold = 0;
-const ship = {x: canvas.width/2, y: canvas.height/2, angle: 0, vx:0, vy:0};
-const bullets = [];
-const asteroids = [];
-const explosions = [];
-const BURST_LIMIT = 10;
-let burstCount = 0;
-const scoreboard = JSON.parse(localStorage.getItem('scoreboard')||'[]');
-scoreboard.sort((a,b)=>(a.time||Infinity)-(b.time||Infinity));
-function spawnAsteroid(size=1, x=Math.random()*canvas.width, y=Math.random()*canvas.height) {
-  const angle = Math.random() * Math.PI * 2;
-  const speed = ASTEROID_MIN_SPEED + Math.random() * (ASTEROID_MAX_SPEED - ASTEROID_MIN_SPEED);
-  asteroids.push({ x, y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, size, emoji: asteroidEmoji });
-}
-
-function startLevel(){
-  waiting = false;
-  levelComplete = false;
-  if(level===1){
-    startTime = performance.now();
-    gameTime = 0;
-  }
+function spawnAsteroid() {
+  const x = Math.random() * canvas.width;
+  const y = Math.random() * canvas.height;
+  asteroids.push({ x, y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed });
+for(let i=0;i<5;i++) spawnAsteroid();
   ship.x = canvas.width/2;
   ship.y = canvas.height/2;
   ship.vx = ship.vy = 0;
   ship.angle = 0;
   bullets.length = 0;
   asteroids.length = 0;
-  for(let i=0;i<7;i++) {
-    let size = 1;
-    if(level===2) size = 2;
-    else if(level===3) size = 3;
-    spawnAsteroid(size);
-  }
-}
-startLevel();
-function playerHit(){
-  lives--;
-  playCrashSound();
-  stopMusic();
-  ship.x = canvas.width/2;
-  ship.y = canvas.height/2;
-  ship.vx = ship.vy = 0;
-  ship.angle = 0;
-  if(lives <= 0){
-    gameOver = true;
-  } else {
-    waiting = true;
-  }
-}
-function restartGame(){
-  score = 0;
-  startTime = performance.now();
-  gameTime = 0;
-  lives = 3;
-  gameOver = false;
-  waiting = false;
-  levelComplete = false;
-  gameComplete = false;
-  level = 1;
-  stopMusic();
-  startLevel();
-}
-
-function nextLevel(){
-  level++;
-  if(level>3) level=3;
-  startLevel();
-}
-const keys = {};
-document.addEventListener('keydown',e=>{
-  if(audioCtx.state === 'suspended') audioCtx.resume();
-  if(!musicInitiated && musicEnabled) startMusic();
-  keys[e.code]=true;
-      if(!ship.shootCooldown && burstCount < BURST_LIMIT) {
-        bullets.push({
-          x: ship.x,
-          y: ship.y,
-          vx: Math.cos(ship.angle) * BULLET_SPEED,
-          vy: Math.sin(ship.angle) * BULLET_SPEED,
-          life: BULLET_RANGE
-        });
-    b.life -= Math.hypot(b.vx, b.vy);
-    if(b.life <= 0 || b.x<0||b.x>canvas.width||b.y<0||b.y>canvas.height)
-      bullets.splice(i,1);
-      nextLevel();
-    }else if(waiting){
-      waiting=false;
-    }
-  }
-});
-document.addEventListener('keyup',e=>{keys[e.code]=false;});
-function update(){
-  if(gameOver || waiting || levelComplete || gameComplete) return;
-  gameTime = (performance.now() - startTime) / 1000;
-  stars.forEach(s=>{s.phase+=s.speed;});
-  if(keys['ArrowLeft']) ship.angle -= TURN_SPEED;
-  if(keys['ArrowRight']) ship.angle += TURN_SPEED;
-  if(keys['ArrowUp']) {
-    ship.vx += Math.cos(ship.angle) * ACCELERATION;
-    ship.vy += Math.sin(ship.angle) * ACCELERATION;
-  }
-  if(keys['ArrowDown']) {
-    ship.vx *= SLOWDOWN_FACTOR;
-    ship.vy *= SLOWDOWN_FACTOR;
-    reverseHold++;
-    if(reverseHold > 15) {
-      ship.vx -= Math.cos(ship.angle) * ACCELERATION;
-      ship.vy -= Math.sin(ship.angle) * ACCELERATION;
-    }
-  } else {
-    reverseHold = 0;
-  }
-  const speed = Math.hypot(ship.vx, ship.vy);
-  engineOsc.frequency.value = 100 + speed * 200;
-  engineGain.gain.value = speed > 0.05 ? 0.05 : 0;
-  if(keys['Space']) {
+  for(let i=0;i<5;i++) spawnAsteroid();
+    if(gameOver || levelComplete){
+  if(gameOver || waiting || levelComplete) return;
+    if(!ship.shootCooldown) {
+      bullets.push({ x: ship.x, y: ship.y, vx: Math.cos(ship.angle) * BULLET_SPEED, vy: Math.sin(ship.angle) * BULLET_SPEED });
+      ship.shootCooldown = 10;
+    if(b.x<0||b.x>canvas.width||b.y<0||b.y>canvas.height) bullets.splice(i,1);
+      if(Math.hypot(a.x-b.x,a.y-b.y)<20){
+        explosions.push({x:a.x, y:a.y, life:20});
+    if(Math.hypot(a.x-ship.x,a.y-ship.y)<20){
+    levelComplete=true;
+    waiting=true;
+  asteroids.forEach(a=>{ctx.fillText(asteroidEmoji,a.x,a.y);});
+    ctx.fillStyle = 'brown';
+    ctx.beginPath();
+    ctx.arc(ex.x, ex.y, 20 - ex.life, 0, Math.PI*2);
+    ctx.fill();
+  ctx.fillText('Score: '+score,10,30);
+  if(levelComplete){
     if(!ship.shootCooldown && burstCount < BURST_LIMIT) {
       bullets.push({
         x: ship.x,
