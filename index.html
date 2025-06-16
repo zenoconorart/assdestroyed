@@ -48,6 +48,36 @@ engineOsc.type = 'sine';
 engineGain.gain.value = 0;
 engineOsc.connect(engineGain).connect(audioCtx.destination);
 engineOsc.start();
+// background jingle
+const musicNotes = [
+  {freq: 523, dur: 0.3},
+  {freq: 659, dur: 0.3},
+  {freq: 784, dur: 0.3},
+  {freq: 659, dur: 0.3}
+];
+let musicPlaying = false;
+function scheduleMusic(){
+  if(!musicPlaying) return;
+  let start = 0;
+  musicNotes.forEach(n=>{
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'square';
+    osc.frequency.value = n.freq;
+    gain.gain.value = 0.05;
+    osc.connect(gain).connect(audioCtx.destination);
+    osc.start(audioCtx.currentTime + start);
+    osc.stop(audioCtx.currentTime + start + n.dur);
+    start += n.dur;
+  });
+  setTimeout(scheduleMusic, start*1000);
+}
+function startMusic(){
+  if(!musicPlaying){
+    musicPlaying = true;
+    scheduleMusic();
+  }
+}
 // Star field
 const stars = [];
 function initStars(){
@@ -116,6 +146,7 @@ function restartGame(){
 const keys = {};
 document.addEventListener('keydown',e=>{
   if(audioCtx.state === 'suspended') audioCtx.resume();
+  startMusic();
   keys[e.code]=true;
   if(e.code==='Enter'){
     if(gameOver || levelComplete){

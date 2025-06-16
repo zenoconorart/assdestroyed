@@ -1,0 +1,8 @@
+{
+  "name": "emoji-asteroids",
+  "version": "1.0.0",
+  "description": "Simple emoji asteroids game",
+  "scripts": {
+    "test": "echo \"No tests specified\""
+  }
+}
