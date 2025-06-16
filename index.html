@@ -48,6 +48,19 @@ engineOsc.type = 'sine';
 engineGain.gain.value = 0;
 engineOsc.connect(engineGain).connect(audioCtx.destination);
 engineOsc.start();
+// Star field
+const stars = [];
+function initStars(){
+  for(let i=0;i<100;i++){
+    stars.push({
+      x: Math.random()*canvas.width,
+      y: Math.random()*canvas.height,
+      phase: Math.random()*Math.PI*2,
+      speed: 0.01 + Math.random()*0.02
+    });
+  }
+}
+initStars();
 // Tunable game constants (slightly slower overall)
 const TURN_SPEED = 0.05;
 const ACCELERATION = 0.05;
@@ -115,6 +128,7 @@ document.addEventListener('keydown',e=>{
 document.addEventListener('keyup',e=>{keys[e.code]=false;});
 function update(){
   if(gameOver || waiting || levelComplete) return;
+  stars.forEach(s=>{s.phase+=s.speed;});
   if(keys['ArrowLeft']) ship.angle -= TURN_SPEED;
   if(keys['ArrowRight']) ship.angle += TURN_SPEED;
   if(keys['ArrowUp']) {
@@ -180,6 +194,11 @@ function update(){
 }
 function draw(){
   ctx.clearRect(0,0,canvas.width,canvas.height);
+  stars.forEach(s=>{
+    const alpha = 0.5 + 0.5*Math.sin(s.phase);
+    ctx.fillStyle = `rgba(255,255,255,${alpha})`;
+    ctx.fillRect(s.x, s.y, 2, 2);
+  });
   ctx.font='30px serif';
   ctx.textAlign='center';
   ctx.textBaseline='middle';
