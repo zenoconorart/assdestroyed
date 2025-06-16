@@ -1,6 +1,6 @@
 # Emoji Asteroids
 
-A small playable asteroids game where the ship, bullets and asteroids are represented with emoji icons: 🍆 for the ship, 💦 for bullets and 🍑 for asteroids.
+A small playable asteroids game where the ship, bullets and asteroids are represented with emoji icons: 🍆 for the ship, 💧 for bullets and 🍑 for asteroids.
 
 ## Running
 
@@ -25,6 +25,8 @@ after recording your high score.
 Asteroids move a bit quicker and each level starts with seven of them. Shots fire
 in bursts of ten with a slightly slower rate so you must release the space bar
 before firing another burst.
+Each shot only travels about half the screen before disappearing, so you need to
+get closer to your targets.
 shown and you can enter your name alongside your completion time. The background
 music pauses when you crash so it doesn't drone on. A "🔕"/"🔔" button centered
 above the canvas toggles the music on and off without stealing focus. A running

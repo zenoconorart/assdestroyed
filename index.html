@@ -29,7 +29,7 @@ const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 const muteBtn = document.getElementById('muteButton');
 const shipEmoji = '🍆'; // eggplant
-const bulletEmoji = '💦'; // water spray
+const bulletEmoji = '💧'; // water droplet
 const asteroidEmoji = '🍑'; // peach
 // Audio setup
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -181,6 +181,7 @@ initStars();
 const TURN_SPEED = 0.05;
 const ACCELERATION = 0.05;
 const BULLET_SPEED = 3;
+const BULLET_RANGE = canvas.width / 2; // bullets travel about half the screen
 const SLOWDOWN_FACTOR = 0.95; // when holding the down arrow
 const ASTEROID_MIN_SPEED = 0.8;
 const ASTEROID_MAX_SPEED = 1.8;
@@ -282,14 +283,17 @@ document.addEventListener('keydown',e=>{
   if(audioCtx.state === 'suspended') audioCtx.resume();
   if(!musicInitiated && musicEnabled) startMusic();
   keys[e.code]=true;
-  if(e.code==='Enter'){
-    if(gameOver){
-      restartGame();
-    }else if(gameComplete){
-      const name = prompt('Enter your name');
-      if(name) saveScore(name, gameTime);
-      restartGame();
-    }else if(levelComplete){
+      if(!ship.shootCooldown && burstCount < BURST_LIMIT) {
+        bullets.push({
+          x: ship.x,
+          y: ship.y,
+          vx: Math.cos(ship.angle) * BULLET_SPEED,
+          vy: Math.sin(ship.angle) * BULLET_SPEED,
+          life: BULLET_RANGE
+        });
+    b.life -= Math.hypot(b.vx, b.vy);
+    if(b.life <= 0 || b.x<0||b.x>canvas.width||b.y<0||b.y>canvas.height)
+      bullets.splice(i,1);
       nextLevel();
     }else if(waiting){
       waiting=false;
