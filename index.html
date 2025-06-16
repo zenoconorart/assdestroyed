@@ -187,8 +187,23 @@ const ASTEROID_MAX_SPEED = 1.8;
 let score = 0;
 let startTime = performance.now();
 let gameTime = 0;
-let lives = 3;
-let gameOver = false;
+const BURST_LIMIT = 10;
+let burstCount = 0;
+scoreboard.sort((a,b)=>(a.time||Infinity)-(b.time||Infinity));
+  if(level===1){
+    startTime = performance.now();
+    gameTime = 0;
+  }
+  for(let i=0;i<7;i++) {
+  startTime = performance.now();
+  gameTime = 0;
+      if(name) saveScore(name, gameTime);
+  gameTime = (performance.now() - startTime) / 1000;
+    if(!ship.shootCooldown && burstCount < BURST_LIMIT) {
+      ship.shootCooldown = 15;
+      burstCount++;
+  } else {
+    burstCount = 0;
 let waiting = false;
 let levelComplete = false;
 let gameComplete = false;
@@ -379,8 +394,9 @@ function update(){
       gameComplete=true;
       stopMusic();
       playVictoryJingle();
-    } else {
-      levelComplete=true;
+  ctx.fillText('Score: '+score+'  Level: '+level+'  Time: '+gameTime.toFixed(1)+'s',10,30);
+      const t = s.time!==undefined ? s.time.toFixed(1)+'s' : '?';
+      ctx.fillText(`${i+1}. ${s.name} - ${t}`,canvas.width/2,canvas.height/2+30*(i+1));
       waiting=true;
     }
   }
