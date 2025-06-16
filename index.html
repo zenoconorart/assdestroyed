@@ -12,7 +12,8 @@ canvas {
 button {
     position: absolute;
     top: 8px;
-    right: 8px;
+    left: 50%;
+    transform: translateX(-50%);
     font-size: 20px;
     background: transparent;
     border: none;
@@ -21,7 +22,7 @@ button {
 </style>
 </head>
 <body>
-<button id="muteButton">🔕</button>
+<button id="muteButton" tabindex="-1">🔕</button>
 <canvas id="gameCanvas" width="800" height="600"></canvas>
 <script>
 const canvas = document.getElementById('gameCanvas');
@@ -118,13 +119,15 @@ function stopMusic(){
   musicOscs.length = 0;
 }
 
-muteBtn.addEventListener('click', () => {
+muteBtn.addEventListener('click', (e) => {
+  e.preventDefault();
   if(musicPlaying){
     stopMusic();
+    muteBtn.textContent = '🔔';
   } else {
     startMusic();
+    muteBtn.textContent = '🔕';
   }
-  muteBtn.textContent = '🔕';
   muteBtn.blur();
 });
 
@@ -287,9 +290,15 @@ function update(){
   engineGain.gain.value = speed > 0.05 ? 0.05 : 0;
   if(keys['Space']) {
     if(!ship.shootCooldown) {
-      bullets.push({ x: ship.x, y: ship.y, vx: Math.cos(ship.angle) * BULLET_SPEED, vy: Math.sin(ship.angle) * BULLET_SPEED });
+      bullets.push({
+        x: ship.x,
+        y: ship.y,
+        vx: Math.cos(ship.angle) * BULLET_SPEED,
+        vy: Math.sin(ship.angle) * BULLET_SPEED,
+        angle: ship.angle - Math.PI / 2
+      });
       playShootSound();
-      ship.shootCooldown = 10;
+      ship.shootCooldown = 15;
     }
   }
   if(ship.shootCooldown>0) ship.shootCooldown--;
@@ -371,7 +380,7 @@ function draw(){
   bullets.forEach(b=>{
     ctx.save();
     ctx.translate(b.x, b.y);
-    ctx.rotate(Math.PI);
+    ctx.rotate(b.angle);
     ctx.fillText(bulletEmoji, 0, 0);
     ctx.restore();
   });
