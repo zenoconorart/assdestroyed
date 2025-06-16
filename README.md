@@ -1,6 +1,6 @@
 # Emoji Asteroids
 
-A small playable asteroids game that uses emoji icons for the ship, bullets and asteroids.
+A small playable asteroids game where the ship, bullets and asteroids are represented with emoji icons: 🍆 for the ship, 💦 for bullets and 🍑 for asteroids.
 
 ## Running
 
