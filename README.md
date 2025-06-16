@@ -10,7 +10,8 @@ with speed and a fart when you destroy a peach. On the second level the 🍑 sta
 larger and split into two normal-sized ones when hit. On level three the giant
 peaches break apart into medium peaches and finally small ones. Clearing the
 final stage shows a scoreboard ranked by how quickly you finish and plays a
-short victory jingle.
+short victory jingle. After entering your name, the scoreboard remains visible
+until you press Enter again to start a new game.
 Your score increases whenever a 🍑 is destroyed, which triggers a brief brown poo
 scatter effect. Lives are shown as 🍆 icons in the upper-right corner. If you lose
 all three lives a game over screen appears. Once every 🍑 is gone a "Level

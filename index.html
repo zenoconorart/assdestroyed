@@ -191,6 +191,7 @@ let gameTime = 0;
 const BURST_LIMIT = 10;
 let burstCount = 0;
 scoreboard.sort((a,b)=>(a.time||Infinity)-(b.time||Infinity));
+let scoreEntered = false;
   if(level===1){
     startTime = performance.now();
     gameTime = 0;
@@ -198,9 +199,14 @@ scoreboard.sort((a,b)=>(a.time||Infinity)-(b.time||Infinity));
   for(let i=0;i<7;i++) {
   startTime = performance.now();
   gameTime = 0;
-      if(name) saveScore(name, gameTime);
-  gameTime = (performance.now() - startTime) / 1000;
-    if(!ship.shootCooldown && burstCount < BURST_LIMIT) {
+  scoreEntered = false;
+      if(!scoreEntered){
+        const name = prompt('Enter your name');
+        if(name) saveScore(name, gameTime);
+        scoreEntered = true;
+      } else {
+        restartGame();
+      }
       ship.shootCooldown = 15;
       burstCount++;
   } else {
@@ -403,7 +409,11 @@ function update(){
       ctx.fillText(`${i+1}. ${s.name} - ${t}`,canvas.width/2,canvas.height/2+30*(i+1));
       waiting=true;
     }
-  }
+    if(!scoreEntered){
+      ctx.fillText('Game complete - press Enter',canvas.width/2,canvas.height/2-40);
+    } else {
+      ctx.fillText('Press Enter to restart',canvas.width/2,canvas.height/2-40);
+    }
 }
 function draw(){
   ctx.clearRect(0,0,canvas.width,canvas.height);
