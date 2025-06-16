@@ -153,6 +153,7 @@ function update(){
 }
 function draw(){
   ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.fillStyle='white';
   ctx.font='30px serif';
   ctx.textAlign='center';
   ctx.textBaseline='middle';
@@ -172,7 +173,6 @@ function draw(){
   ctx.rotate(ship.angle);
   ctx.fillText(shipEmoji,0,0);
   ctx.restore();
-  ctx.fillStyle='white';
   ctx.textAlign='left';
   ctx.fillText('Score: '+score,10,30);
   ctx.textAlign='right';
