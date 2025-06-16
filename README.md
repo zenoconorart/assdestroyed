@@ -5,5 +5,9 @@ A small playable asteroids game where the ship, bullets and asteroids are repres
 ## Running
 
 Open `index.html` in a modern web browser. Use the left/right arrows to rotate
-and the up arrow to accelerate. Hold the down arrow to slow down gradually.
-Press the space bar to shoot.
+and the up arrow to accelerate. Hold the down arrow to brake; keep holding to
+thrust backwards. Press the space bar to shoot.
+
+Your score increases whenever a 🍑 is destroyed. Lives are shown as 🍆 icons in
+the upper-right corner. If you lose all three lives a game over screen appears.
+Press `Enter` to continue after losing a life or to restart after game over.
