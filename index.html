@@ -78,6 +78,33 @@ function startMusic(){
     scheduleMusic();
   }
 }
+
+function playVictoryJingle(){
+  const notes = [
+    {freq:523, dur:0.3},
+    {freq:659, dur:0.3},
+    {freq:784, dur:0.6}
+  ];
+  let start=0;
+  notes.forEach(n=>{
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type='triangle';
+    osc.frequency.value=n.freq;
+    gain.gain.value=0.1;
+    osc.connect(gain).connect(audioCtx.destination);
+    osc.start(audioCtx.currentTime+start);
+    osc.stop(audioCtx.currentTime+start+n.dur);
+    start+=n.dur;
+  });
+}
+
+function saveScore(name,score){
+  scoreboard.push({name,score});
+  scoreboard.sort((a,b)=>b.score-a.score);
+  scoreboard.splice(5);
+  localStorage.setItem('scoreboard', JSON.stringify(scoreboard));
+}
 // Star field
 const stars = [];
 function initStars(){
@@ -103,12 +130,14 @@ let lives = 3;
 let gameOver = false;
 let waiting = false;
 let levelComplete = false;
+let gameComplete = false;
 let level = 1;
 let reverseHold = 0;
 const ship = {x: canvas.width/2, y: canvas.height/2, angle: 0, vx:0, vy:0};
 const bullets = [];
 const asteroids = [];
 const explosions = [];
+const scoreboard = JSON.parse(localStorage.getItem('scoreboard')||'[]');
 function spawnAsteroid(size=1, x=Math.random()*canvas.width, y=Math.random()*canvas.height) {
   const angle = Math.random() * Math.PI * 2;
   const speed = ASTEROID_MIN_SPEED + Math.random() * (ASTEROID_MAX_SPEED - ASTEROID_MIN_SPEED);
@@ -124,12 +153,18 @@ function startLevel(){
   ship.angle = 0;
   bullets.length = 0;
   asteroids.length = 0;
-  for(let i=0;i<5;i++) spawnAsteroid(level===2 ? 2 : 1);
+  for(let i=0;i<5;i++) {
+    let size = 1;
+    if(level===2) size = 2;
+    else if(level===3) size = 3;
+    spawnAsteroid(size);
+  }
 }
 startLevel();
 function playerHit(){
   lives--;
   playCrashSound();
+  musicPlaying=false;
   ship.x = canvas.width/2;
   ship.y = canvas.height/2;
   ship.vx = ship.vy = 0;
@@ -146,12 +181,14 @@ function restartGame(){
   gameOver = false;
   waiting = false;
   levelComplete = false;
+  gameComplete = false;
   level = 1;
   startLevel();
 }
 
 function nextLevel(){
   level++;
+  if(level>3) level=3;
   startLevel();
 }
 const keys = {};
@@ -162,6 +199,10 @@ document.addEventListener('keydown',e=>{
   if(e.code==='Enter'){
     if(gameOver){
       restartGame();
+    }else if(gameComplete){
+      const name = prompt('Enter your name');
+      if(name) saveScore(name, score);
+      restartGame();
     }else if(levelComplete){
       nextLevel();
     }else if(waiting){
@@ -171,7 +212,7 @@ document.addEventListener('keydown',e=>{
 });
 document.addEventListener('keyup',e=>{keys[e.code]=false;});
 function update(){
-  if(gameOver || waiting || levelComplete) return;
+  if(gameOver || waiting || levelComplete || gameComplete) return;
   stars.forEach(s=>{s.phase+=s.speed;});
   if(keys['ArrowLeft']) ship.angle -= TURN_SPEED;
   if(keys['ArrowRight']) ship.angle += TURN_SPEED;
@@ -221,6 +262,15 @@ function update(){
         if(level===2 && a.size===2){
           spawnAsteroid(1,a.x,a.y);
           spawnAsteroid(1,a.x,a.y);
+        } else if(level===3){
+          if(a.size===3){
+            spawnAsteroid(2,a.x,a.y);
+            spawnAsteroid(2,a.x,a.y);
+            spawnAsteroid(2,a.x,a.y);
+          } else if(a.size===2){
+            spawnAsteroid(1,a.x,a.y);
+            spawnAsteroid(1,a.x,a.y);
+          }
         }
         score++;
         explosions.push({x:a.x, y:a.y, life:20});
@@ -237,8 +287,14 @@ function update(){
     if(ex.life<=0) explosions.splice(i,1);
   });
   if(!levelComplete && asteroids.length===0){
-    levelComplete=true;
-    waiting=true;
+    if(level===3){
+      gameComplete=true;
+      musicPlaying=false;
+      playVictoryJingle();
+    } else {
+      levelComplete=true;
+      waiting=true;
+    }
   }
 }
 function draw(){
@@ -278,7 +334,14 @@ function draw(){
   ctx.fillText('Score: '+score+'  Level: '+level,10,30);
   ctx.textAlign='right';
   ctx.fillText(shipEmoji.repeat(lives),canvas.width-10,30);
-  if(levelComplete){
+  if(gameComplete){
+    ctx.textAlign='center';
+    ctx.fillText('Game complete - press Enter',canvas.width/2,canvas.height/2-40);
+    ctx.fillText('Scoreboard:',canvas.width/2,canvas.height/2);
+    scoreboard.forEach((s,i)=>{
+      ctx.fillText(`${i+1}. ${s.name} - ${s.score}`,canvas.width/2,canvas.height/2+30*(i+1));
+    });
+  } else if(levelComplete){
     ctx.textAlign='center';
     ctx.fillText('Level complete - press Enter',canvas.width/2,canvas.height/2);
   } else if(waiting){
