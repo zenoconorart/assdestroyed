@@ -7,8 +7,8 @@ A small playable asteroids game where the ship, bullets and asteroids are repres
 The game includes a soft looping jingle, randomized twinkling stars and simple sound
 effects: spurt when you shoot, splat when you crash, a vroom that changes
 with speed and a fart when you destroy a peach. On the second level the 🍑 start
-larger and split into two white droplets when hit. On level three the giant
-peaches break apart in stages and likewise turn into droplets. Clearing the final
+larger and split into two normal-sized ones when hit. On level three the giant
+peaches break apart into medium peaches and finally small ones. Clearing the final
 stage shows a scoreboard and plays a short victory jingle.
 Open `index.html` in a modern web browser. Use the left/right arrows to rotate
 and the up arrow to accelerate. Hold the down arrow to brake; keep holding to

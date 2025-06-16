@@ -74,6 +74,8 @@ const musicNotes = [
   {freq: 880, dur: 0.4}
 ];
 let musicPlaying = false;
+let musicTimeout = null;
+const musicOscs = [];
 function scheduleMusic(){
   if(!musicPlaying) return;
   let start = 0;
@@ -86,9 +88,14 @@ function scheduleMusic(){
     osc.connect(gain).connect(audioCtx.destination);
     osc.start(audioCtx.currentTime + start);
     osc.stop(audioCtx.currentTime + start + n.dur);
+    musicOscs.push(osc);
+    osc.onended = () => {
+      const i = musicOscs.indexOf(osc);
+      if(i>=0) musicOscs.splice(i,1);
+    };
     start += n.dur;
   });
-  setTimeout(scheduleMusic, start*1000);
+  musicTimeout = setTimeout(scheduleMusic, start*1000);
 }
 function startMusic(){
   if(!musicPlaying){
@@ -96,14 +103,22 @@ function startMusic(){
     scheduleMusic();
   }
 }
+function stopMusic(){
+  musicPlaying = false;
+  if(musicTimeout){
+    clearTimeout(musicTimeout);
+    musicTimeout = null;
+  }
+  musicOscs.forEach(o=>{ try { o.stop(); } catch(e) {} });
+  musicOscs.length = 0;
+}
 
 muteBtn.addEventListener('click', () => {
   if(musicPlaying){
-    musicPlaying = false;
+    stopMusic();
     muteBtn.textContent = 'Unmute';
   } else {
-    musicPlaying = true;
-    scheduleMusic();
+    startMusic();
     muteBtn.textContent = 'Mute';
   }
 });
@@ -135,16 +150,6 @@ function saveScore(name,score){
   localStorage.setItem('scoreboard', JSON.stringify(scoreboard));
 }
 
-function drawDroplet(x,y,size){
-  ctx.save();
-  ctx.fillStyle='white';
-  ctx.beginPath();
-  ctx.moveTo(x, y - size);
-  ctx.quadraticCurveTo(x + size, y, x, y + size);
-  ctx.quadraticCurveTo(x - size, y, x, y - size);
-  ctx.fill();
-  ctx.restore();
-}
 // Star field
 const stars = [];
 function initStars(){
@@ -178,10 +183,10 @@ const bullets = [];
 const asteroids = [];
 const explosions = [];
 const scoreboard = JSON.parse(localStorage.getItem('scoreboard')||'[]');
-function spawnAsteroid(size=1, x=Math.random()*canvas.width, y=Math.random()*canvas.height, emoji=asteroidEmoji) {
+function spawnAsteroid(size=1, x=Math.random()*canvas.width, y=Math.random()*canvas.height) {
   const angle = Math.random() * Math.PI * 2;
   const speed = ASTEROID_MIN_SPEED + Math.random() * (ASTEROID_MAX_SPEED - ASTEROID_MIN_SPEED);
-  asteroids.push({ x, y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, size, emoji });
+  asteroids.push({ x, y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, size, emoji: asteroidEmoji });
 }
 
 function startLevel(){
@@ -204,7 +209,7 @@ startLevel();
 function playerHit(){
   lives--;
   playCrashSound();
-  musicPlaying=false;
+  stopMusic();
   ship.x = canvas.width/2;
   ship.y = canvas.height/2;
   ship.vx = ship.vy = 0;
@@ -223,6 +228,7 @@ function restartGame(){
   levelComplete = false;
   gameComplete = false;
   level = 1;
+  stopMusic();
   startLevel();
 }
 
@@ -300,16 +306,16 @@ function update(){
         bullets.splice(bi,1);
         asteroids.splice(ai,1);
         if(level===2 && a.size===2){
-          spawnAsteroid(1,a.x,a.y,'droplet');
-          spawnAsteroid(1,a.x,a.y,'droplet');
+          spawnAsteroid(1,a.x,a.y);
+          spawnAsteroid(1,a.x,a.y);
         } else if(level===3){
           if(a.size===3){
-            spawnAsteroid(2,a.x,a.y,'droplet');
-            spawnAsteroid(2,a.x,a.y,'droplet');
-            spawnAsteroid(2,a.x,a.y,'droplet');
+            spawnAsteroid(2,a.x,a.y);
+            spawnAsteroid(2,a.x,a.y);
+            spawnAsteroid(2,a.x,a.y);
           } else if(a.size===2){
-            spawnAsteroid(1,a.x,a.y,'droplet');
-            spawnAsteroid(1,a.x,a.y,'droplet');
+            spawnAsteroid(1,a.x,a.y);
+            spawnAsteroid(1,a.x,a.y);
           }
         }
         playFartSound();
@@ -337,7 +343,7 @@ function update(){
   if(!levelComplete && asteroids.length===0){
     if(level===3){
       gameComplete=true;
-      musicPlaying=false;
+      stopMusic();
       playVictoryJingle();
     } else {
       levelComplete=true;
@@ -360,11 +366,7 @@ function draw(){
   bullets.forEach(b=>{ctx.fillText(bulletEmoji,b.x,b.y);});
   asteroids.forEach(a=>{
     ctx.font = `${30*(a.size||1)}px serif`;
-    if(a.emoji==='droplet'){
-      drawDroplet(a.x,a.y,15*(a.size||1));
-    } else {
-      ctx.fillText(a.emoji || asteroidEmoji,a.x,a.y);
-    }
+    ctx.fillText(a.emoji || asteroidEmoji, a.x, a.y);
   });
   ctx.font='20px serif';
   explosions.forEach(ex=>{
@@ -378,6 +380,7 @@ function draw(){
   ctx.save();
   ctx.translate(ship.x,ship.y);
   ctx.rotate(ship.angle);
+  ctx.font='30px serif';
   ctx.fillText(shipEmoji,0,0);
   ctx.restore();
   ctx.fillStyle='white';
