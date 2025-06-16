@@ -29,7 +29,7 @@ const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 const muteBtn = document.getElementById('muteButton');
 const shipEmoji = '🍆'; // eggplant
-const bulletEmoji = '💧'; // water droplet
+const bulletEmoji = '💦'; // water spray
 const asteroidEmoji = '🍑'; // peach
 // Audio setup
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -80,6 +80,8 @@ const musicNotes = [
   {freq: 880, dur: 0.4}
 ];
 let musicPlaying = false;
+let musicEnabled = true;
+let musicInitiated = false;
 let musicTimeout = null;
 const musicOscs = [];
 function scheduleMusic(){
@@ -104,6 +106,8 @@ function scheduleMusic(){
   musicTimeout = setTimeout(scheduleMusic, start*1000);
 }
 function startMusic(){
+  if(!musicEnabled) return;
+  musicInitiated = true;
   if(!musicPlaying){
     musicPlaying = true;
     scheduleMusic();
@@ -121,10 +125,12 @@ function stopMusic(){
 
 muteBtn.addEventListener('click', (e) => {
   e.preventDefault();
-  if(musicPlaying){
+  if(musicEnabled){
+    musicEnabled = false;
     stopMusic();
     muteBtn.textContent = '🔔';
   } else {
+    musicEnabled = true;
     startMusic();
     muteBtn.textContent = '🔕';
   }
@@ -248,7 +254,7 @@ function nextLevel(){
 const keys = {};
 document.addEventListener('keydown',e=>{
   if(audioCtx.state === 'suspended') audioCtx.resume();
-  startMusic();
+  if(!musicInitiated && musicEnabled) startMusic();
   keys[e.code]=true;
   if(e.code==='Enter'){
     if(gameOver){
@@ -294,11 +300,10 @@ function update(){
         x: ship.x,
         y: ship.y,
         vx: Math.cos(ship.angle) * BULLET_SPEED,
-        vy: Math.sin(ship.angle) * BULLET_SPEED,
-        angle: ship.angle - Math.PI / 2
+        vy: Math.sin(ship.angle) * BULLET_SPEED
       });
       playShootSound();
-      ship.shootCooldown = 15;
+      ship.shootCooldown = 10;
     }
   }
   if(ship.shootCooldown>0) ship.shootCooldown--;
@@ -377,13 +382,7 @@ function draw(){
   ctx.font='30px serif';
   ctx.textAlign='center';
   ctx.textBaseline='middle';
-  bullets.forEach(b=>{
-    ctx.save();
-    ctx.translate(b.x, b.y);
-    ctx.rotate(b.angle);
-    ctx.fillText(bulletEmoji, 0, 0);
-    ctx.restore();
-  });
+  bullets.forEach(b=>{ctx.fillText(bulletEmoji,b.x,b.y);});
   asteroids.forEach(a=>{
     ctx.font = `${30*(a.size||1)}px serif`;
     ctx.fillText(a.emoji || asteroidEmoji, a.x, a.y);
