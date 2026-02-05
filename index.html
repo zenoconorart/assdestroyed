@@ -86,12 +86,15 @@ canvas.addEventListener('touchstart', (e)=>{
   if(!ship.shootCooldown){ bullets.push({ x: ship.x, y: ship.y, vx: Math.cos(ship.angle)*BULLET_SPEED, vy: Math.sin(ship.angle)*BULLET_SPEED }); ship.shootCooldown = 10; }
   if(gameOver) restartGame(); else if(levelComplete) nextLevel(); else if(waiting) waiting=false;
 }, {passive:false});
+canvas.addEventListener('mousedown', (e)=>{
+  if(gameOver) restartGame(); else if(levelComplete) nextLevel(); else if(waiting) waiting=false;
+});
 canvas.addEventListener('touchmove', (e)=>{ e.preventDefault(); const t=e.touches[0]; if(t){ setTarget(t);} }, {passive:false});
 canvas.addEventListener('touchend', (e)=>{ e.preventDefault(); touchActive = false; }, {passive:false});
 canvas.addEventListener('touchcancel', (e)=>{ e.preventDefault(); touchActive = false; }, {passive:false});
 // Keyboard
 const keys = {};
-document.addEventListener('keydown',e=>{ keys[e.code]=true; if(e.code==='Enter'){ if(gameOver) restartGame(); else if(levelComplete) nextLevel(); else if(waiting) waiting=false; } });
+document.addEventListener('keydown',e=>{ keys[e.code]=true; if(e.code==='Enter' || e.code==='Space'){ if(gameOver) restartGame(); else if(levelComplete) nextLevel(); else if(waiting) waiting=false; } });
 document.addEventListener('keyup',e=>{ keys[e.code]=false; });
 function update(){
   if(gameOver || waiting || levelComplete) return;
@@ -133,7 +136,7 @@ function draw(){
   ctx.fillStyle='white'; ctx.textAlign='left'; ctx.fillText('Score: '+score,10,30);
   ctx.textAlign='right'; ctx.fillText(shipEmoji.repeat(lives),canvas.width-10,30);
   if(levelComplete){ ctx.textAlign='center'; ctx.fillText('Level complete - tap to continue',canvas.width/2,canvas.height/2); }
-  else if(waiting){ ctx.textAlign='center'; ctx.fillText('Tap to continue',canvas.width/2,canvas.height/2); }
+  else if(waiting){ ctx.textAlign='center'; ctx.fillText('Tap/click to continue',canvas.width/2,canvas.height/2); }
   if(gameOver){ ctx.textAlign='center'; ctx.fillText('Game Over - tap to restart',canvas.width/2,canvas.height/2); }
 }
 function loop(){ update(); draw(); requestAnimationFrame(loop); }
