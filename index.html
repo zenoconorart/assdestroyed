@@ -33,6 +33,7 @@ const LEVELS = [
 ];
 let currentLevel = 1;
 let score = 0, lives = 3, gameOver = false, waiting = false, levelComplete = false;
+let lifePoopTimer = 0;
 const ship = {x: 0, y: 0, angle: 0, vx:0, vy:0};
 const bullets = [], asteroids = [], explosions = [], splashes = [], celebration = [];
 // audio
@@ -189,6 +190,7 @@ startLevel();
 function playerHit(){
   lives--; ship.x = canvas.width/2; ship.y = canvas.height/2; ship.vx=ship.vy=0; ship.angle=0;
   playLose();
+  lifePoopTimer = 40;
   if(lives<=0){ gameOver = true; } else { waiting = true; }
 }
 function restartGame(){
@@ -284,6 +286,7 @@ function update(){
     c.x += c.vx; c.y += c.vy; c.life--;
     if(c.life<=0) celebration.splice(i,1);
   }
+  if(lifePoopTimer>0) lifePoopTimer--;
   if(!levelComplete && asteroids.length===0){ levelComplete=true; waiting=true; playJingle(); startWinCelebration(); }
 }
 function draw(){
@@ -300,6 +303,14 @@ function draw(){
   ctx.textAlign='right'; ctx.fillText(shipEmoji.repeat(lives),canvas.width-10,30);
   if(levelComplete){ ctx.textAlign='center'; ctx.fillText('Level complete - tap to continue',canvas.width/2,canvas.height/2); }
   else if(waiting){ ctx.textAlign='center'; ctx.fillText('Tap/click to continue',canvas.width/2,canvas.height/2); }
+  if(lifePoopTimer>0){
+    ctx.save();
+    ctx.globalAlpha = Math.min(1, lifePoopTimer/40);
+    ctx.font = '140px serif';
+    ctx.textAlign='center';
+    ctx.fillText('💩', canvas.width/2, canvas.height/2);
+    ctx.restore();
+  }
   if(gameOver){
     ctx.save();
     ctx.globalAlpha=0.9;
