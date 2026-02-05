@@ -34,7 +34,60 @@ const LEVELS = [
 let currentLevel = 1;
 let score = 0, lives = 3, gameOver = false, waiting = false, levelComplete = false;
 const ship = {x: 0, y: 0, angle: 0, vx:0, vy:0};
-const bullets = [], asteroids = [], explosions = [];
+const bullets = [], asteroids = [], explosions = [], splashes = [];
+// audio
+let audioCtx;
+function ensureAudio(){
+  if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+}
+function playSpunk(){
+  ensureAudio();
+  const t = audioCtx.currentTime;
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.type = 'square';
+  osc.frequency.setValueAtTime(220, t);
+  osc.frequency.exponentialRampToValueAtTime(1200, t+0.05);
+  gain.gain.setValueAtTime(0.0001, t);
+  gain.gain.exponentialRampToValueAtTime(0.15, t+0.01);
+  gain.gain.exponentialRampToValueAtTime(0.0001, t+0.12);
+  osc.connect(gain).connect(audioCtx.destination);
+  osc.start(t); osc.stop(t+0.13);
+}
+function playFart(){
+  ensureAudio();
+  const t = audioCtx.currentTime;
+  const noise = audioCtx.createBufferSource();
+  const buffer = audioCtx.createBuffer(1, audioCtx.sampleRate*0.4, audioCtx.sampleRate);
+  const data = buffer.getChannelData(0);
+  for(let i=0;i<data.length;i++) data[i]=(Math.random()*2-1)*0.6;
+  noise.buffer = buffer;
+  const filter = audioCtx.createBiquadFilter();
+  filter.type='lowpass'; filter.frequency.setValueAtTime(600, t);
+  const gain = audioCtx.createGain();
+  gain.gain.setValueAtTime(0.0001, t);
+  gain.gain.exponentialRampToValueAtTime(0.35, t+0.02);
+  gain.gain.exponentialRampToValueAtTime(0.0001, t+0.35);
+  noise.connect(filter).connect(gain).connect(audioCtx.destination);
+  noise.start(t); noise.stop(t+0.36);
+}
+function playJingle(){
+  ensureAudio();
+  const t = audioCtx.currentTime;
+  const notes = [523.25, 659.25, 783.99];
+  notes.forEach((f,i)=>{
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type='triangle';
+    osc.frequency.setValueAtTime(f, t + i*0.12);
+    gain.gain.setValueAtTime(0.0001, t + i*0.12);
+    gain.gain.exponentialRampToValueAtTime(0.2, t + i*0.12 + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + i*0.12 + 0.2);
+    osc.connect(gain).connect(audioCtx.destination);
+    osc.start(t + i*0.12);
+    osc.stop(t + i*0.12 + 0.22);
+  });
+}
 function resize(){
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
@@ -67,6 +120,16 @@ function splitAsteroid(a){
     spawnAsteroidAt(a.x + offset, a.y + offset, newSize, splits-1);
   }
 }
+function addSplash(x,y){
+  for(let i=0;i<10;i++){
+    splashes.push({
+      x, y,
+      vx:(Math.random()*2-1)*1.2,
+      vy:(Math.random()*2-1)*1.2,
+      life:30
+    });
+  }
+}
 startLevel();
 function playerHit(){
   lives--; ship.x = canvas.width/2; ship.y = canvas.height/2; ship.vx=ship.vy=0; ship.angle=0;
@@ -87,7 +150,7 @@ canvas.addEventListener('touchstart', (e)=>{
   const t = e.touches[0]; if(t){ setTarget(t); }
   touchActive = true;
   // fire once on tap
-  if(!ship.shootCooldown){ bullets.push({ x: ship.x, y: ship.y, vx: Math.cos(ship.angle)*BULLET_SPEED, vy: Math.sin(ship.angle)*BULLET_SPEED }); ship.shootCooldown = 10; }
+  if(!ship.shootCooldown){ bullets.push({ x: ship.x, y: ship.y, vx: Math.cos(ship.angle)*BULLET_SPEED, vy: Math.sin(ship.angle)*BULLET_SPEED }); ship.shootCooldown = 10; playSpunk(); }
   if(gameOver) restartGame(); else if(levelComplete) nextLevel(); else if(waiting) waiting=false;
 }, {passive:false});
 canvas.addEventListener('mousedown', (e)=>{
@@ -114,7 +177,7 @@ function update(){
   if(keys['ArrowRight']) ship.angle += TURN_SPEED;
   if(keys['ArrowUp']) { ship.vx += Math.cos(ship.angle)*ACCELERATION; ship.vy += Math.sin(ship.angle)*ACCELERATION; }
   if(keys['ArrowDown']) { ship.vx *= SLOWDOWN_FACTOR; ship.vy *= SLOWDOWN_FACTOR; }
-  if(keys['Space']) { if(!ship.shootCooldown){ bullets.push({ x: ship.x, y: ship.y, vx: Math.cos(ship.angle)*BULLET_SPEED, vy: Math.sin(ship.angle)*BULLET_SPEED }); ship.shootCooldown = 10; } }
+  if(keys['Space']) { if(!ship.shootCooldown){ bullets.push({ x: ship.x, y: ship.y, vx: Math.cos(ship.angle)*BULLET_SPEED, vy: Math.sin(ship.angle)*BULLET_SPEED }); ship.shootCooldown = 10; playSpunk(); } }
   if(ship.shootCooldown>0) ship.shootCooldown--;
   // drift slows a bit when not thrusting
   if(!touchActive && !keys['ArrowUp']){ ship.vx *= SLOWDOWN_FACTOR; ship.vy *= SLOWDOWN_FACTOR; }
@@ -137,6 +200,8 @@ function update(){
         splitAsteroid(a);
         score++;
         explosions.push({x:a.x, y:a.y, life:20, size:aSize});
+        addSplash(a.x,a.y);
+        playFart();
         break;
       }
     }
@@ -147,13 +212,19 @@ function update(){
     }
   }
   explosions.forEach((ex,i)=>{ ex.life--; if(ex.life<=0) explosions.splice(i,1); });
-  if(!levelComplete && asteroids.length===0){ levelComplete=true; waiting=true; }
+  for(let i=splashes.length-1;i>=0;i--){
+    const p = splashes[i];
+    p.x += p.vx; p.y += p.vy; p.life--;
+    if(p.life<=0) splashes.splice(i,1);
+  }
+  if(!levelComplete && asteroids.length===0){ levelComplete=true; waiting=true; playJingle(); }
 }
 function draw(){
   ctx.clearRect(0,0,canvas.width,canvas.height);
   ctx.font='30px serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
   bullets.forEach(b=>ctx.fillText(bulletEmoji,b.x,b.y));
   asteroids.forEach(a=>{ const s = Number.isFinite(a.size) ? a.size : 24; ctx.font=`${Math.max(18,s*1.4)}px serif`; ctx.fillText(asteroidEmoji,a.x,a.y); });
+  splashes.forEach(p=>{ ctx.save(); ctx.globalAlpha=p.life/30; ctx.font='20px serif'; ctx.fillText('💩', p.x, p.y); ctx.restore(); });
   explosions.forEach(ex=>{ ctx.save(); ctx.globalAlpha=ex.life/20; ctx.fillStyle='brown'; ctx.beginPath(); const r = Math.max(1, (ex.size||20) * (ex.life/20)); ctx.arc(ex.x, ex.y, r, 0, Math.PI*2); ctx.fill(); ctx.restore(); });
   ctx.font='30px serif';
   ctx.save(); ctx.translate(ship.x,ship.y); ctx.rotate(ship.angle); ctx.fillText(shipEmoji,0,0); ctx.restore();
