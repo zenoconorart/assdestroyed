@@ -131,7 +131,7 @@ function draw(){
   ctx.font='30px serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
   bullets.forEach(b=>ctx.fillText(bulletEmoji,b.x,b.y));
   asteroids.forEach(a=>{ ctx.font=`${Math.max(18,a.size*1.4)}px serif`; ctx.fillText(asteroidEmoji,a.x,a.y); });
-  explosions.forEach(ex=>{ ctx.save(); ctx.globalAlpha=ex.life/20; ctx.fillStyle='brown'; ctx.beginPath(); ctx.arc(ex.x, ex.y, (ex.size||20) - (20-ex.life), 0, Math.PI*2); ctx.fill(); ctx.restore(); });
+  explosions.forEach(ex=>{ ctx.save(); ctx.globalAlpha=ex.life/20; ctx.fillStyle='brown'; ctx.beginPath(); const r = Math.max(1, (ex.size||20) * (ex.life/20)); ctx.arc(ex.x, ex.y, r, 0, Math.PI*2); ctx.fill(); ctx.restore(); });
   ctx.font='30px serif';
   ctx.save(); ctx.translate(ship.x,ship.y); ctx.rotate(ship.angle); ctx.fillText(shipEmoji,0,0); ctx.restore();
   ctx.fillStyle='white'; ctx.textAlign='left'; ctx.fillText('Score: '+score,10,30);
