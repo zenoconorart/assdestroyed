@@ -199,22 +199,26 @@ function nextLevel(){
 }
 // Touch control state
 let touchActive = false;
+let touchTimer = null;
 let target = {x:0,y:0};
 function setTarget(t){ target.x = t.clientX; target.y = t.clientY; }
 canvas.addEventListener('touchstart', (e)=>{
   e.preventDefault();
   const t = e.touches[0]; if(t){ setTarget(t); }
-  touchActive = true;
   // fire once on tap
   if(!ship.shootCooldown){ bullets.push({ x: ship.x, y: ship.y, vx: Math.cos(ship.angle)*BULLET_SPEED, vy: Math.sin(ship.angle)*BULLET_SPEED }); ship.shootCooldown = 10; playSpunk(); }
   if(gameOver) restartGame(); else if(levelComplete) nextLevel(); else if(waiting) waiting=false;
+  // only enable thrust if holding
+  touchActive = false;
+  if(touchTimer) clearTimeout(touchTimer);
+  touchTimer = setTimeout(()=>{ touchActive = true; }, 120);
 }, {passive:false});
 canvas.addEventListener('mousedown', (e)=>{
   if(gameOver) restartGame(); else if(levelComplete) nextLevel(); else if(waiting) waiting=false;
 });
-canvas.addEventListener('touchmove', (e)=>{ e.preventDefault(); const t=e.touches[0]; if(t){ setTarget(t);} }, {passive:false});
-canvas.addEventListener('touchend', (e)=>{ e.preventDefault(); touchActive = false; if(waiting) waiting=false; }, {passive:false});
-canvas.addEventListener('touchcancel', (e)=>{ e.preventDefault(); touchActive = false; if(waiting) waiting=false; }, {passive:false});
+canvas.addEventListener('touchmove', (e)=>{ e.preventDefault(); const t=e.touches[0]; if(t){ setTarget(t);} touchActive = true; }, {passive:false});
+canvas.addEventListener('touchend', (e)=>{ e.preventDefault(); touchActive = false; if(touchTimer) clearTimeout(touchTimer); if(waiting) waiting=false; }, {passive:false});
+canvas.addEventListener('touchcancel', (e)=>{ e.preventDefault(); touchActive = false; if(touchTimer) clearTimeout(touchTimer); if(waiting) waiting=false; }, {passive:false});
 // Keyboard
 const keys = {};
 document.addEventListener('keydown',e=>{ keys[e.code]=true; if(e.code==='Enter' || e.code==='Space'){ if(gameOver) restartGame(); else if(levelComplete) nextLevel(); else if(waiting) waiting=false; } });
