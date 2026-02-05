@@ -37,8 +37,27 @@ const ship = {x: 0, y: 0, angle: 0, vx:0, vy:0};
 const bullets = [], asteroids = [], explosions = [], splashes = [], celebration = [];
 // audio
 let audioCtx;
+let thrusterOsc, thrusterGain;
 function ensureAudio(){
   if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+}
+function startThruster(){
+  ensureAudio();
+  if(thrusterOsc) return;
+  thrusterOsc = audioCtx.createOscillator();
+  thrusterGain = audioCtx.createGain();
+  thrusterOsc.type = 'sawtooth';
+  thrusterOsc.frequency.setValueAtTime(120, audioCtx.currentTime);
+  thrusterGain.gain.setValueAtTime(0.0001, audioCtx.currentTime);
+  thrusterGain.gain.exponentialRampToValueAtTime(0.02, audioCtx.currentTime + 0.1);
+  thrusterOsc.connect(thrusterGain).connect(audioCtx.destination);
+  thrusterOsc.start();
+}
+function stopThruster(){
+  if(!thrusterOsc) return;
+  thrusterGain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.1);
+  thrusterOsc.stop(audioCtx.currentTime + 0.12);
+  thrusterOsc = null; thrusterGain = null;
 }
 function playSpunk(){
   ensureAudio();
@@ -197,7 +216,7 @@ document.addEventListener('keydown',e=>{ keys[e.code]=true; if(e.code==='Enter' 
 document.addEventListener('keyup',e=>{ keys[e.code]=false; });
 function update(){
   if(waiting && touchActive){ waiting = false; }
-  if(gameOver || waiting || levelComplete) return;
+  if(gameOver || waiting || levelComplete){ stopThruster(); return; }
   // touch thrust toward target
   if(touchActive){
     ship.angle = Math.atan2(target.y - ship.y, target.x - ship.x);
@@ -208,6 +227,7 @@ function update(){
   if(keys['ArrowLeft']) ship.angle -= TURN_SPEED;
   if(keys['ArrowRight']) ship.angle += TURN_SPEED;
   if(keys['ArrowUp']) { ship.vx += Math.cos(ship.angle)*ACCELERATION; ship.vy += Math.sin(ship.angle)*ACCELERATION; }
+  if((touchActive || keys['ArrowUp']) && !(gameOver||waiting||levelComplete)) startThruster(); else stopThruster();
   if(keys['ArrowDown']) { ship.vx *= SLOWDOWN_FACTOR; ship.vy *= SLOWDOWN_FACTOR; }
   if(keys['Space']) { if(!ship.shootCooldown){ bullets.push({ x: ship.x, y: ship.y, vx: Math.cos(ship.angle)*BULLET_SPEED, vy: Math.sin(ship.angle)*BULLET_SPEED }); ship.shootCooldown = 10; playSpunk(); } }
   if(ship.shootCooldown>0) ship.shootCooldown--;
