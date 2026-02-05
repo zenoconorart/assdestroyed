@@ -59,8 +59,8 @@ function updateThruster(active, speed){
   }
   ensureThruster();
   const s = Math.min(3, Math.max(0, speed));
-  const targetGain = 0.004 + (s/3)*0.02; // very faint
-  const targetFreq = 80 + (s/3)*140;
+  const targetGain = 0.008 + (s/3)*0.03; // faint but audible
+  const targetFreq = 80 + (s/3)*160;
   thrusterGain.gain.exponentialRampToValueAtTime(targetGain, audioCtx.currentTime + 0.05);
   thrusterOsc.frequency.exponentialRampToValueAtTime(targetFreq, audioCtx.currentTime + 0.05);
 }
