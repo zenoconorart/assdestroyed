@@ -28,13 +28,13 @@ const ASTEROID_MAX_SPEED = 0.9;
 const LEVELS = [
   { splits: 0, size: 24 },  // level 1 normal
   { splits: 1, size: 28 },  // level 2 slightly bigger, split once
-  { splits: 2, size: 24 },  // level 3 split twice
-  { splits: 3, size: 24 }   // level 4 split three times (lots of tiny ones)
+  { splits: 2, size: 30 },  // level 3 a bit bigger, split twice
+  { splits: 3, size: 34 }   // level 4 even bigger, split three times (lots of tiny ones)
 ];
 let currentLevel = 1;
 let score = 0, lives = 3, gameOver = false, waiting = false, levelComplete = false;
 const ship = {x: 0, y: 0, angle: 0, vx:0, vy:0};
-const bullets = [], asteroids = [], explosions = [], splashes = [];
+const bullets = [], asteroids = [], explosions = [], splashes = [], celebration = [];
 // audio
 let audioCtx;
 function ensureAudio(){
@@ -121,12 +121,26 @@ function splitAsteroid(a){
   }
 }
 function addSplash(x,y){
-  for(let i=0;i<10;i++){
+  for(let i=0;i<14;i++){
     splashes.push({
       x, y,
       vx:(Math.random()*2-1)*1.2,
       vy:(Math.random()*2-1)*1.2,
-      life:30
+      life:45,
+      size: 28 + Math.random()*10
+    });
+  }
+}
+function startWinCelebration(){
+  celebration.length = 0;
+  for(let i=0;i<60;i++){
+    celebration.push({
+      x: Math.random()*canvas.width,
+      y: canvas.height + Math.random()*200,
+      vx: (Math.random()*2-1)*0.3,
+      vy: - (1 + Math.random()*1.5),
+      life: 120 + Math.random()*60,
+      emoji: (i%6===0)?'🌋':(i%6===1)?'🍆':(i%6===2)?'💦':'💖'
     });
   }
 }
@@ -217,14 +231,20 @@ function update(){
     p.x += p.vx; p.y += p.vy; p.life--;
     if(p.life<=0) splashes.splice(i,1);
   }
-  if(!levelComplete && asteroids.length===0){ levelComplete=true; waiting=true; playJingle(); }
+  for(let i=celebration.length-1;i>=0;i--){
+    const c = celebration[i];
+    c.x += c.vx; c.y += c.vy; c.life--;
+    if(c.life<=0) celebration.splice(i,1);
+  }
+  if(!levelComplete && asteroids.length===0){ levelComplete=true; waiting=true; playJingle(); startWinCelebration(); }
 }
 function draw(){
   ctx.clearRect(0,0,canvas.width,canvas.height);
   ctx.font='30px serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
   bullets.forEach(b=>ctx.fillText(bulletEmoji,b.x,b.y));
   asteroids.forEach(a=>{ const s = Number.isFinite(a.size) ? a.size : 24; ctx.font=`${Math.max(18,s*1.4)}px serif`; ctx.fillText(asteroidEmoji,a.x,a.y); });
-  splashes.forEach(p=>{ ctx.save(); ctx.globalAlpha=p.life/30; ctx.font='20px serif'; ctx.fillText('💩', p.x, p.y); ctx.restore(); });
+  splashes.forEach(p=>{ ctx.save(); ctx.globalAlpha=p.life/45; ctx.font=`${p.size}px serif`; ctx.fillText('💩', p.x, p.y); ctx.restore(); });
+  celebration.forEach(c=>{ ctx.save(); ctx.globalAlpha=Math.min(1,c.life/60); ctx.font=`${24 + (c.emoji==='🌋'?12:0)}px serif`; ctx.fillText(c.emoji, c.x, c.y); ctx.restore(); });
   explosions.forEach(ex=>{ ctx.save(); ctx.globalAlpha=ex.life/20; ctx.fillStyle='brown'; ctx.beginPath(); const r = Math.max(1, (ex.size||20) * (ex.life/20)); ctx.arc(ex.x, ex.y, r, 0, Math.PI*2); ctx.fill(); ctx.restore(); });
   ctx.font='30px serif';
   ctx.save(); ctx.translate(ship.x,ship.y); ctx.rotate(ship.angle); ctx.fillText(shipEmoji,0,0); ctx.restore();
@@ -232,7 +252,18 @@ function draw(){
   ctx.textAlign='right'; ctx.fillText(shipEmoji.repeat(lives),canvas.width-10,30);
   if(levelComplete){ ctx.textAlign='center'; ctx.fillText('Level complete - tap to continue',canvas.width/2,canvas.height/2); }
   else if(waiting){ ctx.textAlign='center'; ctx.fillText('Tap/click to continue',canvas.width/2,canvas.height/2); }
-  if(gameOver){ ctx.textAlign='center'; ctx.fillText('Game Over - tap to restart',canvas.width/2,canvas.height/2); }
+  if(gameOver){
+    ctx.save();
+    ctx.globalAlpha=0.9;
+    ctx.font='80px serif';
+    for(let y=60; y<canvas.height; y+=90){
+      for(let x=60; x<canvas.width; x+=90){
+        ctx.fillText('💩', x, y);
+      }
+    }
+    ctx.restore();
+    ctx.textAlign='center'; ctx.fillStyle='white'; ctx.fillText('Game Over - tap to restart',canvas.width/2,canvas.height/2);
+  }
 }
 function loop(){ update(); draw(); requestAnimationFrame(loop); }
 loop();
