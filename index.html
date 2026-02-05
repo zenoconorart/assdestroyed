@@ -90,13 +90,14 @@ canvas.addEventListener('mousedown', (e)=>{
   if(gameOver) restartGame(); else if(levelComplete) nextLevel(); else if(waiting) waiting=false;
 });
 canvas.addEventListener('touchmove', (e)=>{ e.preventDefault(); const t=e.touches[0]; if(t){ setTarget(t);} }, {passive:false});
-canvas.addEventListener('touchend', (e)=>{ e.preventDefault(); touchActive = false; }, {passive:false});
-canvas.addEventListener('touchcancel', (e)=>{ e.preventDefault(); touchActive = false; }, {passive:false});
+canvas.addEventListener('touchend', (e)=>{ e.preventDefault(); touchActive = false; if(waiting) waiting=false; }, {passive:false});
+canvas.addEventListener('touchcancel', (e)=>{ e.preventDefault(); touchActive = false; if(waiting) waiting=false; }, {passive:false});
 // Keyboard
 const keys = {};
 document.addEventListener('keydown',e=>{ keys[e.code]=true; if(e.code==='Enter' || e.code==='Space'){ if(gameOver) restartGame(); else if(levelComplete) nextLevel(); else if(waiting) waiting=false; } });
 document.addEventListener('keyup',e=>{ keys[e.code]=false; });
 function update(){
+  if(waiting && touchActive){ waiting = false; }
   if(gameOver || waiting || levelComplete) return;
   // touch thrust toward target
   if(touchActive){
