@@ -88,6 +88,23 @@ function playJingle(){
     osc.stop(t + i*0.12 + 0.22);
   });
 }
+function playLose(){
+  ensureAudio();
+  const t = audioCtx.currentTime;
+  const notes = [392, 330, 262, 196];
+  notes.forEach((f,i)=>{
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type='sawtooth';
+    osc.frequency.setValueAtTime(f, t + i*0.12);
+    gain.gain.setValueAtTime(0.0001, t + i*0.12);
+    gain.gain.exponentialRampToValueAtTime(0.25, t + i*0.12 + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + i*0.12 + 0.18);
+    osc.connect(gain).connect(audioCtx.destination);
+    osc.start(t + i*0.12);
+    osc.stop(t + i*0.12 + 0.2);
+  });
+}
 function resize(){
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
@@ -147,6 +164,7 @@ function startWinCelebration(){
 startLevel();
 function playerHit(){
   lives--; ship.x = canvas.width/2; ship.y = canvas.height/2; ship.vx=ship.vy=0; ship.angle=0;
+  playLose();
   if(lives<=0){ gameOver = true; } else { waiting = true; }
 }
 function restartGame(){
